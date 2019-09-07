@@ -9,6 +9,8 @@ Get the lyrics to the currently playing Spotify song right in your terminal.
 ## CLI
 
 - `lyrics` to get the currently playing song lyrics
+- `lyrics --continuous` to stay open and update the lyrics when you get to the next song
+  - Alternatively `--watch`, `-w` or `-c`
 - `lyrics "The Beatles - Blackbird"` for getting lyrics for a specific song.
 
 ## Support

@@ -3,6 +3,7 @@ import re
 import unicodedata
 import sys
 import platform
+import time
 from urllib.request import Request, urlopen
 from bs4 import BeautifulSoup
 from SwSpotify import spotify
@@ -85,24 +86,38 @@ def highlight_text(text):
     return text
 
 
+def fetch_and_render(song_name):
+    try:
+        clear_terminal()
+        print(f"\n\t{highlight_title(song_name)}\n")
+
+        page = open_genius_page(song_name)
+        text = get_page_lyrics(page)
+
+        clear_terminal()
+        print(highlight_title(song_name))
+        print("\n")
+        print(highlight_text(text))
+    except Exception as e:
+        print("Could not get lyrics:")
+        print("No lyrics for this song on Genius" if str(
+            e) == "read of closed file" else e)
+
+
 try:
-    args = sys.argv[1:]
-    if len(args) == 0:
-        song_name = get_current_song_name()
+    song_name = ''
+    if len(sys.argv) > 1 and sys.argv[1] in ("--continuous", "--continous", "--watch", "-w", "-c"):
+        while True:
+            new_song_name = get_current_song_name()
+            if song_name != new_song_name:
+                song_name = new_song_name
+                fetch_and_render(song_name)
+            time.sleep(5)
     else:
-        song_name = " ".join(map(str, sys.argv[1:]))
-
-    clear_terminal()
-    print(f"\n\t{highlight_title(song_name)}\n")
-
-    page = open_genius_page(song_name)
-    text = get_page_lyrics(page)
-
-    clear_terminal()
-    print(highlight_title(song_name))
-    print("\n")
-    print(highlight_text(text))
-except Exception as e:
-    print("Could not get lyrics:")
-    print("No lyrics for this song on Genius" if str(
-        e) == "read of closed file" else e)
+        if len(sys.argv[1:]) == 0:
+            song_name = get_current_song_name()
+        else:
+            song_name = " ".join(map(str, sys.argv[1:]))
+        fetch_and_render(song_name)
+except KeyboardInterrupt:
+    exit(0)
