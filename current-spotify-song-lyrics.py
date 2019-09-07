@@ -6,6 +6,7 @@ import warnings
 import dbus
 import unicodedata
 import os
+import sys
 
 warnings.filterwarnings("ignore", category=DeprecationWarning)
 
@@ -29,11 +30,12 @@ def get_current_song_name():
     song = re.sub('(\s+)-(.+)', '', song)
     song = re.sub('\(feat.+\)', '', song).strip()
 
-    return remove_accents(artist + '-' + song)
+    return remove_accents(artist + ' - ' + song)
 
 
 def transform_song_name(song_name):
     song_name = song_name.lower()
+    song_name = song_name.replace(' - ', '-')
     song_name = song_name.replace('. ', '-')
     song_name = song_name.replace('/', '-')
     song_name = song_name.replace(' & ', ' and ')
@@ -68,10 +70,13 @@ def get_page_lyrics(soup):
 
 
 try:
-    song_name = get_current_song_name()
+    args = sys.argv[1:]
+    if len(args) == 0:
+        song_name = get_current_song_name()
+    else:
+        song_name = ' '.join(map(str, sys.argv[1:]))
 
-    os.system('clear')
-    print(song_name + "...\n")
+    print("\n\t" + song_name + "\n")
 
     (soup, url) = open_genius(song_name)
 
@@ -79,5 +84,7 @@ try:
 
     os.system('clear')
     print(text)
-except:
-    print("Could not get lyrics...")
+except Exception as e:
+    print("Could not get lyrics:")
+    print('No lyrics for this song on Genius' if str(
+        e) == 'read of closed file' else e)
