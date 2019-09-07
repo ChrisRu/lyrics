@@ -1,68 +1,51 @@
 #!/usr/bin/env python3
-import urllib.request
-from bs4 import BeautifulSoup
 import re
 import warnings
-import dbus
 import unicodedata
-import os
 import sys
+from urllib.request import Request, urlopen
+from bs4 import BeautifulSoup
+from SwSpotify import spotify
 
 warnings.filterwarnings("ignore", category=DeprecationWarning)
 
 
-def remove_accents(input_str):
-    nkfd_form = unicodedata.normalize('NFKD', str(input_str))
+def remove_accents(input):
+    nkfd_form = unicodedata.normalize('NFKD', input)
     return u"".join([c for c in nkfd_form if not unicodedata.combining(c)])
 
 
 def get_current_song_name():
-    session_bus = dbus.SessionBus()
-    spotify_bus = session_bus.get_object(
-        "org.mpris.MediaPlayer2.spotify", "/org/mpris/MediaPlayer2")
-    spotify_properties = dbus.Interface(
-        spotify_bus, "org.freedesktop.DBus.Properties")
-    metadata = spotify_properties.Get(
-        "org.mpris.MediaPlayer2.Player", "Metadata")
-
-    artist = metadata['xesam:artist'][0]
-    song = metadata['xesam:title']
-    song = re.sub('(\s+)-(.+)', '', song)
-    song = re.sub('\(feat.+\)', '', song).strip()
-
-    return remove_accents(artist + ' - ' + song)
+    return ' - '.join(spotify.current()[::-1])
 
 
 def transform_song_name(song_name):
     song_name = song_name.lower()
-    song_name = song_name.replace(' - ', '-')
+    song_name = remove_accents(song_name)
+    song_name = song_name.replace(' - ', '-', 1)
+    song_name = re.sub('(\s+)-(.+)', '', song_name)
+    song_name = re.sub('\(feat.+\)', '', song_name).strip()
     song_name = song_name.replace('. ', '-')
     song_name = song_name.replace('/', '-')
     song_name = song_name.replace(' & ', ' and ')
     song_name = song_name.replace(' ', '-')
     song_name = re.sub("[^a-z0-9-]", '', song_name)
+
     return song_name
 
 
-class AppURLOpener(urllib.request.FancyURLopener):
-    version = "Mozilla/5.0"
-
-    def http_error_default(self, url, fp, errorcode, errormessage, headers):
-        if errorcode == 403:
-            raise ValueError("403")
-        return super(AppURLOpener, self).http_error_default(url, fp, errorcode, errormessage, headers)
-
-
-def open_genius(song_name):
+def open_genius_page(song_name):
     song_name = transform_song_name(song_name)
-    page_url = 'https://genius.com/' + song_name + "-lyrics"
 
-    page = AppURLOpener().open(page_url)
-    return (BeautifulSoup(page, 'html.parser'), page_url)
+    page_url = f"https://genius.com/{song_name}-lyrics"
+    request = Request(page_url, headers={'User-agent': 'Mozilla/5.0'})
+    page = urlopen(request)
+
+    return BeautifulSoup(page, 'html.parser')
 
 
-def get_page_lyrics(soup):
-    full_text = soup.select('div.song_body-lyrics')[0].text
+def get_page_lyrics(page):
+    full_text = page.select('div.song_body-lyrics')[0].text
 
     text = full_text.replace('More on Genius', '').strip()
     text = re.sub("\n\n(\n+)", "\n\n", text)
@@ -76,13 +59,12 @@ try:
     else:
         song_name = ' '.join(map(str, sys.argv[1:]))
 
-    print("\n\t" + song_name + "\n")
+    print(f"\n\t{song_name}\n")
 
-    (soup, url) = open_genius(song_name)
+    page = open_genius_page(song_name)
+    text = get_page_lyrics(page)
 
-    text = get_page_lyrics(soup)
-
-    os.system('clear')
+    print(chr(27) + "[2J")
     print(text)
 except Exception as e:
     print("Could not get lyrics:")
