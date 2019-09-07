@@ -2,7 +2,7 @@
 import re
 import unicodedata
 import sys
-import os
+import platform
 from urllib.request import Request, urlopen
 from bs4 import BeautifulSoup
 from SwSpotify import spotify
@@ -71,13 +71,13 @@ def clear_terminal():
 
 
 def highlight_title(title):
-    if os.name != 'nt':
+    if platform.system() != "Windows":
         return f"{color.CYAN}{style.BOLD}{style.UNDERLINE}{title}{style.END}"
     return title
 
 
 def highlight_text(text):
-    if os.name != 'nt':
+    if platform.system() != "Windows":
         text = text.replace("[", f"{style.BOLD}{color.BLUE}[")
         text = text.replace("]", f"]{style.END}")
         text = text.replace("(", f"{color.PURPLE}(")
