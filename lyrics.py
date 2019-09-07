@@ -1,13 +1,10 @@
 #!/usr/bin/env python3
 import re
-import warnings
 import unicodedata
 import sys
 from urllib.request import Request, urlopen
 from bs4 import BeautifulSoup
 from SwSpotify import spotify
-
-warnings.filterwarnings("ignore", category=DeprecationWarning)
 
 
 def remove_accents(input):
