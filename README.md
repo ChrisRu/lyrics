@@ -19,6 +19,6 @@ This script should support Linux, MacOS and Windows. This has however not been t
 
 ## Installation
 
-Requires Python 3
+Requires Python 3.
 
 Install the packages from the requirement.txt document with pip. Then you can copy the script wherever.
