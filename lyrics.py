@@ -4,6 +4,7 @@ import unicodedata
 import sys
 import time
 import os
+import threading
 from urllib.request import Request, urlopen
 from bs4 import BeautifulSoup
 from SwSpotify import spotify, SpotifyPaused, SpotifyNotRunning, SpotifyClosed
@@ -27,6 +28,26 @@ class color:
     GREEN = "\033[92m"
     YELLOW = "\033[93m"
     RED = "\033[91m"
+
+
+class SpinnerThread(threading.Thread):
+    def __init__(self, speed=0.15):
+        super().__init__(target=self._spin)
+        self.daemon = True
+        self._stopevent = threading.Event()
+        self._speed = speed
+
+    def stop(self):
+        self._stopevent.set()
+
+    def _spin(self):
+        while not self._stopevent.isSet():
+            for t in '|/-\\':
+                sys.stdout.write(indent + t + indent)
+                sys.stdout.flush()
+                time.sleep(self._speed)
+                sys.stdout.write('\b' * (len(indent) * 2 + 1))
+        sys.stdout.flush()
 
 
 def remove_accents(input):
@@ -113,8 +134,13 @@ def fetch_and_render(song_name):
     print()
 
     try:
+        spinner_thread = SpinnerThread()
+        spinner_thread.start()
+
         page = open_genius_page(song_name)
         text = get_page_lyrics(page)
+
+        spinner_thread.stop()
 
         clear_terminal()
 
@@ -169,7 +195,7 @@ try:
 
     fetch_and_render(song_name)
 except KeyboardInterrupt:
-    exit(0)
+    sys.exit()
 except SpotifyPaused:
     print()
     print_text("Spotify doesn't appear to be playing at the moment")
