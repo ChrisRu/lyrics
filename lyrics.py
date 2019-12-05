@@ -2,11 +2,15 @@
 import re
 import unicodedata
 import sys
-import platform
 import time
+import os
 from urllib.request import Request, urlopen
 from bs4 import BeautifulSoup
-from SwSpotify import spotify
+from SwSpotify import spotify, SpotifyPaused, SpotifyNotRunning, SpotifyClosed
+
+
+indent = "  "
+watch_timeout = 3
 
 
 class style:
@@ -72,17 +76,17 @@ def get_page_lyrics(page):
 
 
 def clear_terminal():
-    print(chr(27) + "[2J")
+    os.system('cls' if os.name == 'nt' else 'clear')
 
 
 def highlight_title(title):
-    if platform.system() != "Windows":
-        return f"{color.CYAN}{style.BOLD}{style.UNDERLINE}{title}{style.END}"
-    return title
+    if os.name == 'nt':
+        return title
+    return f"{color.CYAN}{style.BOLD}{style.UNDERLINE}{title}{style.END}"
 
 
 def highlight_text(text):
-    if platform.system() != "Windows":
+    if os.name != 'nt':
         text = text.replace("[", f"{style.BOLD}{color.BLUE}[")
         text = text.replace("]", f"]{style.END}")
         text = text.replace("(", f"{color.PURPLE}(")
@@ -90,38 +94,91 @@ def highlight_text(text):
     return text
 
 
-def fetch_and_render(song_name):
-    try:
-        clear_terminal()
-        print(f"\n\t{highlight_title(song_name)}\n")
+errors = {
+    "HTTP Error 404: Not Found": "No lyrics for this song on Genius",
+    "read of closed file": "No lyrics for this song on Genius",
+}
 
+
+def print_text(text):
+    text = text.replace("\n", "\n" + indent)
+    print(indent + text)
+
+
+def fetch_and_render(song_name):
+    clear_terminal()
+
+    print()
+    print_text(highlight_title(song_name))
+    print()
+
+    try:
         page = open_genius_page(song_name)
         text = get_page_lyrics(page)
 
         clear_terminal()
-        print(highlight_title(song_name))
-        print("\n")
-        print(highlight_text(text))
+
+        print()
+        print_text(highlight_title(song_name))
+        print()
+        print_text(highlight_text(text))
+        print()
     except Exception as e:
-        print("Could not get lyrics:")
-        print("No lyrics for this song on Genius" if str(
-            e) == "read of closed file" else e)
+        e = str(e)
+        if e in errors:
+            print_text(f"{errors[e]}")
+        else:
+            print_text("Could not get lyrics:")
+            print_text(e)
+        print("\n")
 
 
 try:
     song_name = ""
-    if len(sys.argv) > 1 and sys.argv[1] in ("--continuous", "--continous", "--watch", "-w", "-c"):
-        while True:
-            new_song_name = get_current_song_name()
-            if song_name != new_song_name:
-                song_name = new_song_name
-                fetch_and_render(song_name)
-            time.sleep(3)
-    else:
-        if len(sys.argv[1:]) == 0:
-            song_name = get_current_song_name()
+
+    if len(sys.argv) > 1:
+        if sys.argv[1] in ("--help", "-h"):
+            print(
+                (
+                    "\n"
+                    "USAGE:"
+                    "\n\tlyrics [options...] <songname>"
+                    "\n"
+                    "\n\t<songname> is optional, if not included lyrics will try to"
+                    "\n\tget the current song playing on spotify"
+                    "\n\n"
+                    "FLAGS:"
+                    "\n\t-w, --watch\twatches for song changes and automatically"
+                    "\n\t           \tfetches the new song lyrics"
+                    "\n"
+                    "\n\t-h, --help\tshows this help screen"
+                    "\n"
+                )
+            )
+        elif sys.argv[1] in ("--watch", "-w"):
+            while True:
+                new_song_name = get_current_song_name()
+                if song_name != new_song_name:
+                    song_name = new_song_name
+                    fetch_and_render(song_name)
+                time.sleep(watch_timeout)
         else:
             song_name = " ".join(map(str, sys.argv[1:]))
-        fetch_and_render(song_name)
+    else:
+        song_name = get_current_song_name()
+
+    fetch_and_render(song_name)
 except KeyboardInterrupt:
     exit(0)
+except SpotifyPaused:
+    print()
+    print_text("Spotify doesn't appear to be playing at the moment")
+    print()
+except SpotifyClosed:
+    print()
+    print_text("Spotify appears to be closed at the moment")
+    print()
+except SpotifyNotRunning:
+    print()
+    print_text("Spotify appears not to be running")
+    print()
