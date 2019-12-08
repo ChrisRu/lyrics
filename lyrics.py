@@ -5,6 +5,7 @@ import sys
 import time
 import os
 import threading
+import argparse
 from urllib.request import Request, urlopen
 from bs4 import BeautifulSoup
 from SwSpotify import spotify, SpotifyPaused, SpotifyNotRunning, SpotifyClosed
@@ -159,44 +160,35 @@ def fetch_and_render(song_name):
         print("\n")
 
 
-try:
-    song_name = ""
+def get_cli_args():
+    parser = argparse.ArgumentParser(
+        description="Get the lyrics from a song in the terminal")
+    parser.version = '1.0.2'
+    parser.add_argument('song_name', nargs='?', type=str,
+                        help='song name to get the lyrics for')
+    parser.add_argument("-w", "--watch", action="store_true",
+                        help='watches for song changes and automatically fetches the new song lyrics')
+    parser.add_argument('-v', '--version', action='version')
+    return parser.parse_args()
 
-    if len(sys.argv) > 1:
-        if sys.argv[1] in ("--help", "-h"):
-            print(
-                (
-                    "\n"
-                    "USAGE:"
-                    "\n\tlyrics [options...] <songname>"
-                    "\n"
-                    "\n\t<songname> is optional, if not included lyrics will try to"
-                    "\n\tget the current song playing on spotify"
-                    "\n\n"
-                    "FLAGS:"
-                    "\n\t-w, --watch\twatches for song changes and automatically"
-                    "\n\t           \tfetches the new song lyrics"
-                    "\n"
-                    "\n\t-h, --help\tshows this help screen"
-                    "\n"
-                )
-            )
-        elif sys.argv[1] in ("--watch", "-w"):
-            while True:
-                new_song_name = get_current_song_name()
-                if song_name != new_song_name:
-                    song_name = new_song_name
-                    fetch_and_render(song_name)
-                time.sleep(watch_timeout)
-        else:
-            song_name = " ".join(map(str, sys.argv[1:]))
-            fetch_and_render(song_name)
+
+try:
+    args = get_cli_args()
+
+    if args.song_name:
+        fetch_and_render(args.song_name)
+    elif args.watch:
+        while True:
+            new_song_name = get_current_song_name()
+            if song_name != new_song_name:
+                song_name = new_song_name
+                fetch_and_render(song_name)
+            time.sleep(watch_timeout)
     else:
         song_name = get_current_song_name()
         fetch_and_render(song_name)
-
 except KeyboardInterrupt:
-    sys.exit()
+    pass
 except SpotifyPaused:
     print()
     print_text("Spotify doesn't appear to be playing at the moment")
