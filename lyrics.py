@@ -190,10 +190,11 @@ try:
                 time.sleep(watch_timeout)
         else:
             song_name = " ".join(map(str, sys.argv[1:]))
+            fetch_and_render(song_name)
     else:
         song_name = get_current_song_name()
+        fetch_and_render(song_name)
 
-    fetch_and_render(song_name)
 except KeyboardInterrupt:
     sys.exit()
 except SpotifyPaused:
