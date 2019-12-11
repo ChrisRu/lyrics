@@ -178,6 +178,7 @@ try:
     if args.song_name:
         fetch_and_render(args.song_name)
     elif args.watch:
+        song_name = ''
         while True:
             new_song_name = get_current_song_name()
             if song_name != new_song_name:
