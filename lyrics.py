@@ -98,7 +98,11 @@ def get_page_lyrics(page):
 
 
 def clear_terminal():
-    os.system('cls' if os.name == 'nt' else 'clear')
+    if os.name != 'nt':
+        print(chr(27) + '[2J')
+        print(chr(27) + "[3J")
+    else:
+        os.system('cls')
 
 
 def highlight_title(title):
@@ -134,8 +138,8 @@ def fetch_and_render(song_name):
     print_text(highlight_title(song_name))
     print()
 
+    spinner_thread = SpinnerThread()
     try:
-        spinner_thread = SpinnerThread()
         spinner_thread.start()
 
         page = open_genius_page(song_name)
@@ -151,12 +155,14 @@ def fetch_and_render(song_name):
         print_text(highlight_text(text))
         print()
     except Exception as e:
-        e = str(e)
-        if e in errors:
-            print_text(f"{errors[e]}")
+        spinner_thread.stop()
+
+        message = str(e)
+        if message in errors:
+            print_text(f"{errors[message]}")
         else:
             print_text("Could not get lyrics:")
-            print_text(e)
+            print_text(message)
         print("\n")
 
 
