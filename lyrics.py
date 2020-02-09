@@ -37,18 +37,34 @@ class SpinnerThread(threading.Thread):
         self.daemon = True
         self._stopevent = threading.Event()
         self._speed = speed
+        self._written = False
 
     def stop(self):
         self._stopevent.set()
+        if self._written:
+            self._clear_spin()
+
+    def _print_spin(self, char):
+        message = indent + char + indent
+        print(message, end='', file=sys.stdout, flush=True)
+        self._written = True
+
+    def _clear_spin(self):
+        message = '\b' * (len(indent) * 2 + 1)
+        print(message, end='', file=sys.stdout, flush=True)
+        self._written = False
 
     def _spin(self):
         while not self._stopevent.isSet():
             for t in '|/-\\':
-                sys.stdout.write(indent + t + indent)
-                sys.stdout.flush()
+                self._print_spin(t)
                 time.sleep(self._speed)
-                sys.stdout.write('\b' * (len(indent) * 2 + 1))
-        sys.stdout.flush()
+
+                if self._written and not self._stopevent.isSet():
+                    self._clear_spin()
+
+                if self._stopevent.isSet():
+                    break
 
 
 def remove_accents(input):
@@ -94,20 +110,22 @@ def get_page_lyrics(page):
 
     text = full_text.replace("More on Genius", "").strip()
     text = re.sub("\n\n(\n+)", "\n\n", text)
+
     return text
 
 
 def clear_terminal():
-    if os.name != 'nt':
+    if os.name == 'nt':
+        os.system('cls')
+    else:
         print(chr(27) + '[2J')
         print(chr(27) + "[3J")
-    else:
-        os.system('cls')
 
 
 def highlight_title(title):
     if os.name == 'nt':
         return title
+
     return f"{color.CYAN}{style.BOLD}{style.UNDERLINE}{title}{style.END}"
 
 
@@ -117,6 +135,7 @@ def highlight_text(text):
         text = text.replace("]", f"]{style.END}")
         text = text.replace("(", f"{color.PURPLE}(")
         text = text.replace(")", f"){style.END}")
+
     return text
 
 
@@ -168,8 +187,8 @@ def fetch_and_render(song_name):
 
 def get_cli_args():
     parser = argparse.ArgumentParser(
-        description="Get the lyrics from a song in the terminal")
-    parser.version = '1.0.2'
+        description="Get the lyrics from a Spotify song in the terminal")
+    parser.version = '1.0.3'
     parser.add_argument('song_name', nargs='?', type=str,
                         help='song name to get the lyrics for')
     parser.add_argument("-w", "--watch", action="store_true",
