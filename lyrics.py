@@ -107,11 +107,29 @@ def search_genius_for_lyrics(lyrics):
 
     data = json.load(response)
 
-    hits = data['response']['sections'][0]['hits']
+    name_matches = []
+    lyric_matches = []
+    other_matches = []
+    for hit in data['response']['sections'][0]['hits']:
+        if 'path' not in hit['result']:
+            continue
 
-    for hit in hits:
-        if hit['type'] == 'song':
-            return hit['result']['path'][1:]
+        path = hit['result']['path'][1:]
+        if hit['index'] == 'lyric':
+            lyric_matches.append(path)
+        elif hit['index'] == 'song':
+            name_matches.append(path)
+        else:
+            other_matches.append(path)
+
+    if len(name_matches) > 0:
+        return name_matches[0]
+
+    if len(lyric_matches) > 0:
+        return lyric_matches[0]
+
+    if len(other_matches) > 0:
+        return other_matches[0]
 
     raise ValueError("No song found")
 
