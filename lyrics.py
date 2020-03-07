@@ -237,7 +237,7 @@ def fetch_and_render(song_name):
 def get_cli_args():
     parser = argparse.ArgumentParser(
         description="Get the lyrics from a Spotify song in the terminal")
-    parser.version = '1.0.3'
+    parser.version = '1.1.0'
     parser.add_argument('song_name', nargs='?', type=str,
                         help='song name to get the lyrics for')
     parser.add_argument("-w", "--watch", action="store_true",
