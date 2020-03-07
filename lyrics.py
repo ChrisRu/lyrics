@@ -6,6 +6,8 @@ import time
 import os
 import threading
 import argparse
+import json
+from urllib.parse import quote
 from urllib.request import Request, urlopen
 from bs4 import BeautifulSoup
 from SwSpotify import spotify, SpotifyPaused, SpotifyNotRunning, SpotifyClosed
@@ -92,17 +94,43 @@ def transform_song_name(song_name):
     song_name = re.sub("[^a-z0-9-]", "", song_name)
     song_name = song_name.title()
 
-    return song_name
+    return song_name + "-lyrics"
 
 
-def open_genius_page(song_name):
-    song_name = transform_song_name(song_name)
+def search_genius_for_lyrics(lyrics):
+    lyrics = re.sub("\s+", "+", lyrics)
+    lyrics = quote(lyrics, safe="+")
 
-    page_url = f"https://genius.com/{song_name}-lyrics"
+    page_url = f"https://genius.com/api/search/multi?q={lyrics}"
     request = Request(page_url, headers={"User-agent": "Mozilla/5.0"})
-    page = urlopen(request)
+    response = urlopen(request)
 
-    return BeautifulSoup(page, "html.parser")
+    data = json.load(response)
+
+    hits = data['response']['sections'][0]['hits']
+
+    for hit in hits:
+        if hit['type'] == 'song':
+            return hit['result']['path'][1:]
+
+    raise ValueError("No song found")
+
+
+def open_genius_page(song_location):
+    page_url = f"https://genius.com/{song_location}"
+    request = Request(page_url, headers={"User-agent": "Mozilla/5.0"})
+    response = urlopen(request)
+
+    return BeautifulSoup(response, "html.parser")
+
+
+def get_page_title(page):
+    song_name = page.select(
+        ".header_with_cover_art-primary_info-title")[0].text
+    song_artist = page.select(
+        ".header_with_cover_art-primary_info-primary_artist")[0].text
+
+    return f"{song_artist} - {song_name}"
 
 
 def get_page_lyrics(page):
@@ -140,6 +168,7 @@ def highlight_text(text):
 
 
 errors = {
+    "No song found": "No song found",
     "HTTP Error 404: Not Found": "No lyrics for this song on Genius",
     "read of closed file": "No lyrics for this song on Genius",
 }
@@ -162,6 +191,7 @@ def fetch_and_render(song_name):
         spinner_thread.start()
 
         page = open_genius_page(song_name)
+        title = get_page_title(page)
         text = get_page_lyrics(page)
 
         spinner_thread.stop()
@@ -169,7 +199,7 @@ def fetch_and_render(song_name):
         clear_terminal()
 
         print()
-        print_text(highlight_title(song_name))
+        print_text(highlight_title(title))
         print()
         print_text(highlight_text(text))
         print()
@@ -177,12 +207,13 @@ def fetch_and_render(song_name):
         spinner_thread.stop()
 
         message = str(e)
+        print()
         if message in errors:
             print_text(f"{errors[message]}")
         else:
             print_text("Could not get lyrics:")
             print_text(message)
-        print("\n")
+        print("")
 
 
 def get_cli_args():
@@ -201,20 +232,25 @@ try:
     args = get_cli_args()
 
     if args.song_name:
-        fetch_and_render(args.song_name)
+        song_name = search_genius_for_lyrics(args.song_name)
+        fetch_and_render(song_name)
     elif args.watch:
         song_name = ''
         while True:
             new_song_name = get_current_song_name()
             if song_name != new_song_name:
                 song_name = new_song_name
-                fetch_and_render(song_name)
+                fetch_and_render(transform_song_name(song_name))
             time.sleep(watch_timeout)
     else:
         song_name = get_current_song_name()
-        fetch_and_render(song_name)
+        fetch_and_render(transform_song_name(song_name))
 except KeyboardInterrupt:
     pass
+except ValueError:
+    print()
+    print_text("No song found with those lyrics")
+    print()
 except SpotifyPaused:
     print()
     print_text("Spotify doesn't appear to be playing at the moment")
