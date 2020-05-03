@@ -23,7 +23,7 @@ def print_text(text):
     print(indent + text)
 
 
-def fetch_and_render(song_name, search_as_lyrics=False):
+def fetch_and_render(song_name, search_as_lyrics=False, is_retry=False):
     try:
         spinner_thread = SpinnerThread(indent)
 
@@ -41,30 +41,44 @@ def fetch_and_render(song_name, search_as_lyrics=False):
         spinner_thread = SpinnerThread(indent)
         spinner_thread.start()
 
-        page = open_genius_page(song_name)
+        try:
+            page = open_genius_page(song_name)
+        except Exception:
+            spinner_thread.stop()
+            fetch_and_render(song_name, True)
+            return
+
         title = get_page_title(page)
         text = get_page_lyrics(page)
 
         if (title is None or text is None):
-            raise ValueError(
-                "Genius has some troubles with this request for unknown reasons")
+            if is_retry:
+                raise ValueError(
+                    "Genius has some troubles with this request for unknown reasons")
+            else:
+                return fetch_and_render(song_name, False, True)
 
         spinner_thread.stop()
 
         clear_terminal()
         print_text(highlight_title(title) + "\n")
         print_text(highlight_text(text) + "\n")
+
+        return True
     except Exception as e:
         spinner_thread.stop()
 
         errors = {
             "HTTP Error 404: Not Found": "No lyrics for this song on Genius",
             "read of closed file": "No lyrics for this song on Genius",
+            "No song found": "No lyrics for this song on Genius"
         }
 
         message = str(e)
 
         clear_terminal()
         print_text(highlight_title(song_name) + "\n")
-        print_text(errors[message]
-                   if message in errors else message + "\n")
+        print_text((errors[message]
+                    if message in errors else message) + "\n")
+
+        return False
