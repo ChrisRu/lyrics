@@ -7,7 +7,7 @@ from lib.render import print_text, fetch_and_render, clear_terminal
 
 name = "lyrics"
 description = "Get the lyrics from a Spotify song in the terminal"
-__version__ = "1.2.1"
+__version__ = "1.2.2"
 
 
 watch_timeout = 3
