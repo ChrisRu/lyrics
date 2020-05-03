@@ -7,7 +7,7 @@ from lib.render import print_text, fetch_and_render, clear_terminal
 
 name = "lyrics"
 description = "Get the lyrics from a Spotify song in the terminal"
-__version__ = "1.2.2"
+__version__ = "1.2.3"
 
 
 watch_timeout = 3
@@ -24,33 +24,38 @@ def get_cli_args():
     return parser.parse_args()
 
 
-try:
-    args = get_cli_args()
+def execute():
+    try:
+        args = get_cli_args()
 
-    if len(args.song_lyrics) > 0:
-        fetch_and_render(" ".join(args.song_lyrics), True)
-    elif args.watch:
-        previous_song_name = None
-        current_song_name = None
-        while True:
-            try:
-                current_song_name = " - ".join(spotify.current()[::-1])
-            except Exception:
-                previous_song_name = None
-                current_song_name = None
+        if len(args.song_lyrics) > 0:
+            fetch_and_render(" ".join(args.song_lyrics), True)
+        elif args.watch:
+            previous_song_name = None
+            current_song_name = None
+            while True:
+                try:
+                    current_song_name = " - ".join(spotify.current()[::-1])
+                except Exception:
+                    previous_song_name = None
+                    current_song_name = None
 
-                clear_terminal()
-                print_text("\nNothing is playing at the moment.\n")
-            if current_song_name is not None and previous_song_name != current_song_name:
-                previous_song_name = current_song_name
-                fetch_and_render(current_song_name, False)
-            time.sleep(watch_timeout)
-    else:
-        song_name = " - ".join(spotify.current()[::-1])
-        fetch_and_render(song_name, False)
-except KeyboardInterrupt:
-    pass
-except ValueError:
-    print_text("\nNo song found with those lyrics\n")
-except Exception as exception:
-    print_text(f"\n{exception}\n")
+                    clear_terminal()
+                    print_text("\nNothing is playing at the moment.\n")
+                if current_song_name is not None and previous_song_name != current_song_name:
+                    previous_song_name = current_song_name
+                    fetch_and_render(current_song_name, False)
+                time.sleep(watch_timeout)
+        else:
+            song_name = " - ".join(spotify.current()[::-1])
+            fetch_and_render(song_name, False)
+    except KeyboardInterrupt:
+        pass
+    except ValueError:
+        print_text("\nNo song found with those lyrics\n")
+    except Exception as exception:
+        print_text(f"\n{exception}\n")
+
+
+if __name__ == "__main__":
+    execute()
