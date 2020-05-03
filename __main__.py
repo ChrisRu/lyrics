@@ -2,18 +2,21 @@
 import argparse
 import time
 from SwSpotify import spotify
-from lib.render import print_text, fetch_and_render
+from lib.render import print_text, fetch_and_render, clear_terminal
 
 
-indent = "  "
+name = "lyrics"
+description = "Get the lyrics from a Spotify song in the terminal"
+__version__ = "1.2.1"
+
+
 watch_timeout = 3
 
 
 def get_cli_args():
-    parser = argparse.ArgumentParser(
-        description="Get the lyrics from a Spotify song in the terminal")
-    parser.version = "1.2.0"
-    parser.add_argument("song_lyrics", nargs="?", type=str,
+    parser = argparse.ArgumentParser(prog=name, description=description)
+    parser.version = __version__
+    parser.add_argument("song_lyrics", nargs="*", type=str,
                         help="song name, or part of the lyrics of a song to find the lyrics for")
     parser.add_argument("-w", "--watch", "-c", "--continuous", action="store_true",
                         help="watches for song changes and automatically fetches the new song lyrics")
@@ -24,25 +27,30 @@ def get_cli_args():
 try:
     args = get_cli_args()
 
-    if args.song_lyrics:
-        fetch_and_render(args.song_lyrics, True, indent)
-    else:
-        previous_song_name = ""
+    if len(args.song_lyrics) > 0:
+        fetch_and_render(" ".join(args.song_lyrics), True)
+    elif args.watch:
+        previous_song_name = None
+        current_song_name = None
         while True:
-            current_song_name = " - ".join(spotify.current()[::-1])
-            if previous_song_name != current_song_name:
+            try:
+                current_song_name = " - ".join(spotify.current()[::-1])
+            except Exception:
+                previous_song_name = None
+                current_song_name = None
+
+                clear_terminal()
+                print_text("\nNothing is playing at the moment.\n")
+            if current_song_name is not None and previous_song_name != current_song_name:
                 previous_song_name = current_song_name
-                fetch_and_render(current_song_name, False, indent)
-            if not args.watch:
-                break
+                fetch_and_render(current_song_name, False)
             time.sleep(watch_timeout)
+    else:
+        song_name = " - ".join(spotify.current()[::-1])
+        fetch_and_render(song_name, False)
 except KeyboardInterrupt:
     pass
 except ValueError:
-    print()
-    print_text("No song found with those lyrics", indent)
-    print()
+    print_text("\nNo song found with those lyrics\n")
 except Exception as exception:
-    print()
-    print_text(str(exception), indent)
-    print()
+    print_text(f"\n{exception}\n")

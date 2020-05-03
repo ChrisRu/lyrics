@@ -25,10 +25,11 @@ def highlight_title(title):
 
 
 def highlight_text(text):
-    if os.name != "nt":
-        text = text.replace("[", f"{style.BOLD}{color.BLUE}[")
-        text = text.replace("]", f"]{style.END}")
-        text = text.replace("(", f"{color.PURPLE}(")
-        text = text.replace(")", f"){style.END}")
+    if os.name == "nt":
+        return text
 
-    return text
+    return (text
+            .replace("[", f"{style.BOLD}{color.BLUE}[")
+            .replace("]", f"]{style.END}")
+            .replace("(", f"{color.PURPLE}(")
+            .replace(")", f"){style.END}"))
