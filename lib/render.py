@@ -51,14 +51,14 @@ def fetch_and_render(song_name, search_as_lyrics=False, is_retry=False):
         title = get_page_title(page)
         text = get_page_lyrics(page)
 
+        spinner_thread.stop()
+
         if (title is None or text is None):
             if is_retry:
                 raise ValueError(
                     "Genius has some troubles with this request for unknown reasons")
             else:
                 return fetch_and_render(song_name, False, True)
-
-        spinner_thread.stop()
 
         clear_terminal()
         print_text(highlight_title(title) + "\n")
