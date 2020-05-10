@@ -2,12 +2,12 @@
 import argparse
 import time
 from SwSpotify import spotify
-from lib.render import print_text, fetch_and_render, clear_terminal
+from lib.render import print_text, write_title, fetch_and_render, clear_terminal
 
 
 name = "lyrics"
 description = "Get the lyrics from a Spotify song in the terminal"
-__version__ = "1.2.3"
+__version__ = "1.2.4"
 
 
 watch_timeout = 3
@@ -26,6 +26,7 @@ def get_cli_args():
 
 def execute():
     try:
+        write_title("lyrics")
         args = get_cli_args()
 
         if len(args.song_lyrics) > 0:
