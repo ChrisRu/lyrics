@@ -1,6 +1,7 @@
 import os
 import time
 import re
+import sys
 from SwSpotify import spotify
 from lib.spinner import SpinnerThread
 from lib.highlight import highlight_text, highlight_title
@@ -16,6 +17,13 @@ def clear_terminal():
     else:
         print_text(chr(27) + "[2J")
         print_text(chr(27) + "[3J")
+
+
+def write_title(title):
+    if os.name == "nt":
+        os.system(f"title {title}")
+    else:
+        sys.stdout.write(f"\x1b]2;{title}\x07")
 
 
 def print_text(text):

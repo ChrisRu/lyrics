@@ -2,12 +2,12 @@
 import argparse
 import time
 from SwSpotify import spotify
-from lib.render import print_text, fetch_and_render, clear_terminal
+from lib.render import print_text, write_title, fetch_and_render, clear_terminal
 
 
 name = "lyrics"
 description = "Get the lyrics from a Spotify song in the terminal"
-__version__ = "1.2.3"
+__version__ = "1.2.4"
 
 
 watch_timeout = 3
@@ -26,6 +26,7 @@ def get_cli_args():
 
 def execute():
     try:
+        write_title("lyrics")
         args = get_cli_args()
 
         if len(args.song_lyrics) > 0:
@@ -40,10 +41,12 @@ def execute():
                     previous_song_name = None
                     current_song_name = None
 
+                    write_title("lyrics")
                     clear_terminal()
                     print_text("\nNothing is playing at the moment.\n")
                 if current_song_name is not None and previous_song_name != current_song_name:
                     previous_song_name = current_song_name
+                    write_title(f"lyrics | {current_song_name}")
                     fetch_and_render(current_song_name, False)
                 time.sleep(watch_timeout)
         else:
