@@ -81,6 +81,12 @@ def get_page_title(page):
         ".header_with_cover_art-primary_info-primary_artist")
 
     if (len(song_name_elements) == 0 or len(song_artist_elements) == 0):
+        song_name_elements = page.select(
+            "h1[class*=SongHeader__Title]")
+        song_artist_elements = page.select(
+            "a[class*=SongHeader__Artist]")
+
+    if (len(song_name_elements) == 0 or len(song_artist_elements) == 0):
         return None
 
     song_artist = song_artist_elements[0].text
@@ -90,12 +96,18 @@ def get_page_title(page):
 
 def get_page_lyrics(page):
     full_text_elements = page.select("div.lyrics")
+    if (len(full_text_elements) > 0):
+        text = full_text_elements[0].text
+        text = text.replace("More on Genius", "").strip()
+        text = re.sub("\n\n(\n+)", "\n\n", text)
+        return text
 
-    if (len(full_text_elements) == 0):
-        return None
+    full_text_elements = page.select("div[class*=Lyrics__Container]")
+    if (len(full_text_elements) > 0):
+        text = '\n'.join([str(f) for f in full_text_elements])
+        text = text.replace('<br/>', '\n')
+        text = BeautifulSoup(text, "html.parser").text
+        text = text.replace("More on Genius", "").strip()
+        return text
 
-    text = full_text_elements[0].text
-    text = text.replace("More on Genius", "").strip()
-    text = re.sub("\n\n(\n+)", "\n\n", text)
-
-    return text
+    return None
