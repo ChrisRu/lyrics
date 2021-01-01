@@ -1,25 +1,26 @@
 import unicodedata
 import re
-import json
-from urllib.parse import quote
-from urllib.request import Request, urlopen
+import requests
+from requests.utils import requote_uri
 from bs4 import BeautifulSoup
+import lxml
+import cchardet
+
+session = requests.Session()
+headers = {"User-agent": "Mozilla/5.0"}
 
 
 def search_genius_for_lyrics(lyrics):
-    lyrics = re.sub("\s+", "+", lyrics)
-    lyrics = quote(lyrics, safe="+")
+    lyrics = re.sub(r"\s+", "+", lyrics)
+    lyrics = requote_uri(lyrics, safe="+")
 
     page_url = f"https://genius.com/api/search/multi?q={lyrics}"
-    request = Request(page_url, headers={"User-agent": "Mozilla/5.0"})
-    response = urlopen(request)
-
-    data = json.load(response)
+    response = session.get(page_url, headers=headers).json()
 
     name_matches = []
     lyric_matches = []
     other_matches = []
-    for hit in data["response"]["sections"][0]["hits"]:
+    for hit in response["response"]["sections"][0]["hits"]:
         if "path" not in hit["result"]:
             continue
 
@@ -48,8 +49,8 @@ def transform_song_name_to_location(song_name):
     song_name = u"".join([c for c in unicodedata.normalize(
         "NFKD", song_name) if not unicodedata.combining(c)])
     song_name = song_name.replace(" - ", "-", 1)
-    song_name = re.sub("(\s+)-(.+)", "", song_name)
-    song_name = re.sub("\(feat.+\)", "", song_name).strip()
+    song_name = re.sub(r"(\s+)-(.+)", "", song_name)
+    song_name = re.sub(r"\(feat.+\)", "", song_name).strip()
     song_name = song_name.replace(" . ", "-")
     song_name = song_name.replace(". ", "-")
     song_name = song_name.replace(" / ", "-")
@@ -57,8 +58,8 @@ def transform_song_name_to_location(song_name):
     song_name = song_name.replace("^", "-")
     song_name = song_name.replace(" & ", " and ")
     song_name = song_name.replace(" ", "-")
-    song_name = re.sub("[^a-z0-9-]", "", song_name)
-    song_name = re.sub("-lyrics$", "", song_name)
+    song_name = re.sub(r"[^a-z0-9-]", "", song_name)
+    song_name = re.sub(r"-lyrics$", "", song_name)
     song_name = song_name.title()
 
     return song_name + "-lyrics"
@@ -67,24 +68,23 @@ def transform_song_name_to_location(song_name):
 def open_genius_page(song_name):
     song_location = transform_song_name_to_location(song_name)
     page_url = f"https://genius.com/{song_location}"
-    request = Request(page_url, headers={
-                      "User-agent": "Mozilla/5.0 (compatible)"})
-    response = urlopen(request)
+    response = session.get(page_url, headers=headers)
 
-    return BeautifulSoup(response, "html.parser")
+    return BeautifulSoup(response.text, "lxml")
 
 
 def get_page_title(page):
     song_name_elements = page.select(
-        ".header_with_cover_art-primary_info-title")
+        "#application h1[class*=SongHeader__Title]")
     song_artist_elements = page.select(
-        ".header_with_cover_art-primary_info-primary_artist")
+        "#application a[class*=SongHeader__Artist]")
 
-    if (len(song_name_elements) == 0 or len(song_artist_elements) == 0):
+    if (len(song_name_elements) == 0):
         song_name_elements = page.select(
-            "h1[class*=SongHeader__Title]")
+            "h1.header_with_cover_art-primary_info-title")
+    if (len(song_artist_elements) == 0):
         song_artist_elements = page.select(
-            "a[class*=SongHeader__Artist]")
+            "h2 a.header_with_cover_art-primary_info-primary_artist")
 
     if (len(song_name_elements) == 0 or len(song_artist_elements) == 0):
         return None
@@ -95,19 +95,20 @@ def get_page_title(page):
 
 
 def get_page_lyrics(page):
+    full_text_elements = page.select(
+        "#application div[class*=Lyrics__Container]")
+    if (len(full_text_elements) > 0):
+        text = '\n'.join([str(f) for f in full_text_elements])
+        text = text.replace('<br/>', '\n')
+        text = BeautifulSoup(text, "lxml").text
+        text = text.replace("More on Genius", "").strip()
+        return text
+
     full_text_elements = page.select("div.lyrics")
     if (len(full_text_elements) > 0):
         text = full_text_elements[0].text
         text = text.replace("More on Genius", "").strip()
-        text = re.sub("\n\n(\n+)", "\n\n", text)
-        return text
-
-    full_text_elements = page.select("div[class*=Lyrics__Container]")
-    if (len(full_text_elements) > 0):
-        text = '\n'.join([str(f) for f in full_text_elements])
-        text = text.replace('<br/>', '\n')
-        text = BeautifulSoup(text, "html.parser").text
-        text = text.replace("More on Genius", "").strip()
+        text = re.sub(r"\n\n(\n+)", "\n\n", text)
         return text
 
     return None

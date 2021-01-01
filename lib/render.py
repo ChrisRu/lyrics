@@ -51,7 +51,7 @@ def fetch_and_render(song_name, search_as_lyrics=False, is_retry=False):
 
         try:
             page = open_genius_page(song_name)
-        except Exception:
+        except Exception as e:
             spinner_thread.stop()
             fetch_and_render(song_name, True)
             return
